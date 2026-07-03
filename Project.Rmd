@@ -1,0 +1,460 @@
+
+```{r}
+loan_data <- read.csv("loan_approval_dataset.csv")
+str(loan_data)
+summary(loan_data)
+```
+
+```{r}
+library(dplyr)
+library(caret)
+
+set.seed(123) 
+
+n <- 1000
+loan_data <- data.frame(
+  CIBIL_score = round(rnorm(n, mean = 700, sd = 50)),
+  Income = round(exp(rnorm(n, mean = 10, sd = 1))),
+  Employment = sample(c("Salaried", "Self-employed", "Unemployed"), n, replace = TRUE),
+  Loan_term = sample(c(12, 24, 36, 48, 60), n, replace = TRUE),
+  Loan_amount = round(exp(rnorm(n, mean = 8, sd = 0.8))),
+  Assets_value = round(exp(rnorm(n, mean = 9, sd = 1.2)))
+)
+loan_data <- loan_data %>%
+  mutate(probability_approved = plogis((CIBIL_score - 650)/50 + log(Income) - 10 - (Loan_amount - 2000)/1000)) %>%
+  mutate(Loan_status = factor(ifelse(runif(n) < probability_approved, "Approved", "Rejected"))) %>%
+  select(-probability_approved)
+print("Distribution in full loan_data:")
+print(table(loan_data$Loan_status))
+```
+
+```{r}
+# Data Preprocessing
+loan_data <- loan_data %>%
+  mutate(Employment = as.factor(Employment))
+
+# Check for missing values
+missing_values <- colSums(is.na(loan_data))
+print(missing_values)
+
+# Handle outliers using the IQR method
+handle_outliers_iqr <- function(x) {
+  Q1 <- quantile(x, 0.25)
+  Q3 <- quantile(x, 0.75)
+  IQR <- Q3 - Q1
+  lower_bound <- Q1 - 1.5 * IQR
+  upper_bound <- Q3 + 1.5 * IQR
+  x[x < lower_bound] <- lower_bound
+  x[x > upper_bound] <- upper_bound
+  return(x)
+}
+# Apply outlier handling to numerical columns
+numerical_cols <- names(select_if(loan_data, is.numeric))
+loan_data[numerical_cols] <- lapply(loan_data[numerical_cols], handle_outliers_iqr)
+
+```
+
+```{r}
+# Split data
+set.seed(456)
+trainIndex <- createDataPartition(loan_data$Loan_status, p = 0.7, list = FALSE)
+train_data <- loan_data[trainIndex, ]
+test_data <- loan_data[-trainIndex, ]
+print("\nDistribution in training data:")
+print(table(train_data$Loan_status))
+print("\nDistribution in test data:")
+print(table(test_data$Loan_status))
+```
+
+```{r}
+# Exploratory Data Analysis (EDA)
+
+# Histograms of numerical features
+par(mfrow = c(2, 3)) 
+numerical_cols <- names(select_if(loan_data, is.numeric))
+for (col in numerical_cols) {
+  hist(loan_data[[col]], main = paste("Histogram of", col), xlab = col, col = "lightblue", border = "white")
+}
+par(mfrow = c(1, 1)) 
+print("Displaying histograms")
+
+# Bar plot of Employment 
+counts <- table(loan_data$Employment, loan_data$Loan_status)
+barplot(counts, main = "Loan Status by Employment Type",
+        xlab = "Loan Status", ylab = "Frequency",
+        legend = rownames(counts), beside = TRUE)
+print("Displaying Employment vs Loan Status")
+
+# Box plots of numerical features by Loan_status
+par(mfrow = c(2, 3)) 
+numerical_cols <- names(select_if(loan_data, is.numeric))
+for (col in numerical_cols) {
+  boxplot(loan_data[[col]] ~ loan_data$Loan_status, main = paste("Boxplot of", col),
+          ylab = col, xlab = "Loan Status")
+}
+par(mfrow = c(1, 1))
+print("Displaying numerical features vs Loan Status")
+```
+
+```{r}
+# 3. Exploratory Data Analysis and Visualization
+# a. Numeric vs. Numeric: Pearson Correlation and Scatter Plots
+numeric_vars <- c("CIBIL_score", "Income", "Loan_term", "Loan_amount", "Assets_value")
+cor_matrix <- cor(train_data[, numeric_vars], method = "pearson")
+print("Pearson Correlation Matrix (Numeric vs. Numeric):")
+print(cor_matrix)
+for (i in 1:(length(numeric_vars) - 1)) {
+  for (j in (i + 1):length(numeric_vars)) {
+    x_var <- numeric_vars[i]
+    y_var <- numeric_vars[j]
+    plot(train_data[[x_var]], train_data[[y_var]],
+         xlab = x_var, ylab = y_var,
+         main = paste("Scatter Plot of", x_var, "vs.", y_var))
+    abline(lm(train_data[[y_var]] ~ train_data[[x_var]]))
+   
+  }
+}
+```
+
+```{r}
+# b. Ordinal vs. Ordinal: Kendall/Spearman Correlation and Scatter Plots (Loan_term is treated as ordinal)
+kendall_corr <- cor(train_data$Loan_term, as.numeric(train_data$Loan_term), method = "kendall")
+spearman_corr <- cor(train_data$Loan_term, as.numeric(train_data$Loan_term), method = "spearman")
+cat("\nKendall Correlation for Loan_term:", kendall_corr, "\n")
+cat("Spearman Correlation for Loan_term:", spearman_corr, "\n")
+
+plot(train_data$Loan_term, as.numeric(train_data$Loan_term),
+     xlab = "Loan_term", ylab = "Numeric Loan_term",
+     main = "Scatter Plot of Loan_term vs. Numeric Loan_term")
+abline(lm(as.numeric(train_data$Loan_term) ~ train_data$Loan_term))
+```
+
+```{r}
+# c. Nominal vs. Nominal: Stacked Bar Chart and Chi-Square Test
+contingency_table <- table(train_data$Employment, train_data$Loan_status)
+proportions <- prop.table(contingency_table, 1) 
+barplot(t(proportions), 
+        col = c("white", "lightblue", "gray"), 
+        legend.text = rownames(proportions),
+        xlab = "Employment",
+        ylab = "Proportion",
+        main = "Stacked Bar Chart of Employment vs. Loan Status"
+        )
+
+chi2_test <- chisq.test(contingency_table)
+print("Chi-Square Test Results for Employment and Loan Status:")
+print(chi2_test)
+```
+
+```{r}
+# d. Nominal vs. Numeric: Box Plots
+for (i in 1:length(numeric_vars)) {
+  x_var <- "Employment"
+  y_var <- numeric_vars[i]
+  boxplot(train_data[[y_var]] ~ train_data[[x_var]],
+          xlab = x_var, ylab = y_var,
+          main = paste("Box Plot of", y_var, "by", x_var),
+          col = c("lightblue", "lightgreen", "lightyellow")
+          )
+
+}
+```
+
+```{r}
+# Shuffle the data randomly
+set.seed(789) 
+loan_data_shuffled <- loan_data[sample(nrow(loan_data)), ]
+(loan_data_shuffled)
+```
+
+```{r}
+# Modle 1: knn model
+trainIndex_knn <- createDataPartition(loan_data_shuffled$Loan_status, p = 0.8, list = FALSE)
+train_data_knn <- loan_data_shuffled[trainIndex_knn, ]
+test_data_knn <- loan_data_shuffled[-trainIndex_knn, ]
+
+# Separate features and labels
+X_train_knn <- train_data_knn %>% select(-Loan_status)
+y_train_knn <- train_data_knn$Loan_status
+X_test_knn <- test_data_knn %>% select(-Loan_status)
+y_test_knn <- test_data_knn$Loan_status
+
+# min-max normalization 
+normalize=function(train,val){
+  train_col_mins= sapply(train, min)
+  train_col_maxs= sapply(train,max)
+  min_max_normalize=function(x, min, max){
+    return ((x-min)/(max-min))}
+  train_n=as.data.frame(mapply(min_max_normalize, train, train_col_mins, train_col_maxs ))
+  val_n=as.data.frame(mapply(min_max_normalize, val, train_col_mins, train_col_maxs ))
+  return (list("train_n"=train_n, "val_n"=val_n))
+}
+
+knn_fold=function(features,labels,fold,kneighbors){
+  train=features[-fold,]
+  val=features[fold,]
+  data_n= normalize(train, val)
+  train_n= data_n$train_n
+  val_n= data_n$val_n
+  train_labels=labels[-fold]
+  validation_labels=labels[fold]
+  val_preds=knn(train_n,val_n,train_labels,k=kneighbors)
+  t= table(validation_labels,val_preds)
+  error=(t[1,2]+t[2,1])/sum(t)
+  return(error)
+}
+```
+
+```{r}
+library(recipes)
+print("K-Nearest Neighbors (KNN)")
+recipe_knn <- recipe(Loan_status ~ ., data = train_data) %>%
+  step_dummy(all_nominal_predictors()) %>%
+  step_normalize(all_numeric_predictors())
+
+prepped_recipe_knn <- prep(recipe_knn, training = train_data)
+train_processed_knn <- bake(prepped_recipe_knn, new_data = train_data)
+test_processed_knn <- bake(prepped_recipe_knn, new_data = test_data)
+
+# Train KNN
+model_knn <- train(
+  Loan_status ~ .,
+  data = train_processed_knn,
+  method = "knn",
+  trControl = trainControl(method = "cv", number = 5),
+  tuneGrid = data.frame(k = c(3, 5, 7, 9)),
+  metric = "Accuracy"
+)
+print(model_knn)
+```
+```{r}
+#install.packages("ROCR")
+library(ROCR)
+predictions_knn <- predict(model_knn, newdata = test_processed_knn)
+cm_knn <- confusionMatrix(predictions_knn, test_processed_knn$Loan_status)
+print("KNN Confusion Matrix:")
+print(cm_knn)
+
+accuracy_knn <- cm_knn$overall["Accuracy"]
+error_rate_knn <- 1 - accuracy_knn
+cat(paste("\nKNN Accuracy:", round(accuracy_knn, 4), "\n"))
+cat(paste("KNN Error Rate:", round(error_rate_knn, 4), "\n"))
+
+precision_knn <- cm_knn$byClass["Precision"]
+recall_knn <- cm_knn$byClass["Recall"]
+f1_knn <- cm_knn$byClass["F1"]
+cat(paste("KNN Precision:", round(precision_knn, 4), "\n"))
+cat(paste("KNN Recall:", round(recall_knn, 4), "\n"))
+cat(paste("KNN F1-score:", round(f1_knn, 4), "\n"))
+
+plot(as.table(cm_knn$table), main = "Confusion Matrix (KNN)",
+     xlab = "Predicted", ylab = "Actual")
+print("Displaying KNN Confusion Matrix visually")
+```
+
+```{r}
+library(pROC)
+roc_knn <- roc(test_processed_knn$Loan_status, as.numeric(predictions_knn))
+plot(roc_knn, main = "ROC Curve for KNN")
+cat("AUC for KNN:", auc(roc_knn), "\n")
+```
+```{r}
+# Model 2: Logistic Regression
+cat("Logistic Regression")
+model_lr <- glm(Loan_status ~ ., data = train_data, family = binomial)
+summary(model_lr) 
+predictions_lr_prob <- predict(model_lr, newdata = test_data, type = "response")
+predicted_classes_lr <- factor(ifelse(predictions_lr_prob > 0.5, "Approved", "Rejected"), levels = levels(train_data$Loan_status))
+
+# Evaluate the model
+conf_matrix_lr <- confusionMatrix(predicted_classes_lr, test_data$Loan_status)
+print(conf_matrix_lr) # Print the confusion matrix
+accuracy_lr <- conf_matrix_lr$overall["Accuracy"]
+error_rate_lr <- 1 - accuracy_lr
+cat(paste("\nLogistic Regression Accuracy:", round(accuracy_lr, 4), "\n"))
+cat(paste("Logistic Regression Error Rate:", round(error_rate_lr, 4), "\n"))
+
+precision_lr <- conf_matrix_lr$byClass["Precision"]
+recall_lr <- conf_matrix_lr$byClass["Recall"]
+f1_lr <- conf_matrix_lr$byClass["F1"]
+cat(paste("Precision:", round(precision_lr, 4), "\n"))
+cat(paste("Recall:", round(recall_lr, 4), "\n"))
+cat(paste("F1-score:", round(f1_lr, 4), "\n"))
+```
+
+```{r}
+cat("Bar Plot of Predicted vs. Actual Classes")
+plot_data_lr <- data.frame(
+  Actual = test_data$Loan_status,
+  Predicted = predicted_classes_lr
+)
+class_counts_lr <- table(plot_data_lr$Actual, plot_data_lr$Predicted)
+
+barplot_matrix_lr <- matrix(
+  c(class_counts_lr[1, ], class_counts_lr[2, ]), 
+  nrow = 2,
+  byrow = TRUE,
+  dimnames = list(c("Actual Approved", "Actual Rejected"), c("Predicted Approved", "Predicted Rejected"))
+)
+barplot(
+  barplot_matrix_lr,
+  beside = TRUE,
+  legend.text = rownames(barplot_matrix_lr),
+  main = "Predicted vs. Actual Loan Status (Logistic Regression)",
+  ylab = "Frequency",
+  xlab = "Predicted Loan Status"
+)
+```
+
+```{r}
+roc_lr <- roc(test_data$Loan_status, predictions_lr_prob)
+plot(roc_lr, main = "ROC Curve for Logistic Regression")
+cat("AUC for Logistic Regression:", auc(roc_lr), "\n")
+```
+
+
+```{r}
+# Model 3: Support Vector Machines (SVM) 
+cat("Support Vector Machines (SVM)")
+library(e1071)
+recipe_svm <- recipe(Loan_status ~ ., data = train_data) %>%
+  step_dummy(all_nominal_predictors()) %>%
+  step_normalize(all_numeric_predictors())
+
+prepped_recipe_svm <- prep(recipe_svm, training = train_data)
+train_processed_svm <- bake(prepped_recipe_svm, new_data = train_data)
+test_processed_svm <- bake(prepped_recipe_svm, new_data = test_data)
+
+model_svm <- svm(Loan_status ~ ., data = train_processed_svm, kernel = "linear", probability = TRUE) 
+print(model_svm)
+
+predictions_svm <- predict(model_svm, newdata = test_processed_svm, probability = TRUE)
+predictions_svm_prob_values <- attr(predictions_svm, "probabilities")
+
+# Evaluate SVM
+cm_svm <- confusionMatrix(predictions_svm, test_processed_svm$Loan_status)
+print("SVM Confusion Matrix:")
+print(cm_svm)
+
+accuracy_svm <- cm_svm$overall["Accuracy"]
+error_rate_svm <- 1 - accuracy_svm
+cat(paste("\nSVM Accuracy:", round(accuracy_svm, 4), "\n"))
+cat(paste("SVM Error Rate:", round(error_rate_svm, 4), "\n"))
+
+precision_svm <- cm_svm$byClass["Precision"]
+recall_svm <- cm_svm$byClass["Recall"]
+f1_svm <- cm_svm$byClass["F1"]
+cat(paste("SVM Precision:", round(precision_svm, 4), "\n"))
+cat(paste("SVM Recall:", round(recall_svm, 4), "\n"))
+cat(paste("SVM F1-score:", round(f1_svm, 4), "\n"))
+
+plot(as.table(cm_svm$table), main = "Confusion Matrix (SVM)",
+     xlab = "Predicted", ylab = "Actual")
+print("Displaying SVM Confusion Matrix visually")
+```
+
+```{r}
+roc_svm <- roc(test_processed_svm$Loan_status, predictions_svm_prob_values[,2]) 
+plot(roc_svm, main = "ROC Curve for SVM")
+cat("AUC for SVM:", auc(roc_svm), "\n")
+```
+```{r}
+#install.packages("xgboost")
+library(xgboost)
+cat("Gradient Boosting (XGBoost)")
+
+recipe_xgb <- recipe(Loan_status ~ ., data = train_data) %>%
+  step_dummy(all_nominal_predictors())
+prepped_recipe_xgb <- prep(recipe_xgb, training = train_data)
+train_processed_xgb <- bake(prepped_recipe_xgb, new_data = train_data)
+test_processed_xgb <- bake(prepped_recipe_xgb, new_data = test_data)
+
+X_train_xgb <- train_processed_xgb %>% select(-Loan_status)
+y_train_xgb <- as.numeric(train_processed_xgb$Loan_status) - 1
+X_test_xgb <- test_processed_xgb %>% select(-Loan_status)
+y_test_xgb <- as.numeric(test_processed_xgb$Loan_status) - 1
+
+# Train XGBoost model
+model_xgb <- xgboost(
+  data = as.matrix(X_train_xgb),
+  label = y_train_xgb,
+  nrounds = 100, 
+  objective = "binary:logistic",
+  eval_metric = "logloss"
+)
+
+predictions_xgb_prob <- predict(model_xgb, newdata = as.matrix(X_test_xgb))
+predicted_classes_xgb <- factor(ifelse(predictions_xgb_prob > 0.5, "Approved", "Rejected"), levels = levels(train_data$Loan_status))
+
+cm_xgb <- confusionMatrix(predicted_classes_xgb, test_data$Loan_status)
+print("XGBoost Confusion Matrix:")
+print(cm_xgb)
+
+accuracy_xgb <- cm_xgb$overall["Accuracy"]
+error_rate_xgb <- 1 - accuracy_xgb
+cat(paste("\nXGBoost Accuracy:", round(accuracy_xgb, 4), "\n"))
+cat(paste("XGBoost Error Rate:", round(error_rate_xgb, 4), "\n"))
+
+precision_xgb <- cm_xgb$byClass["Precision"]
+recall_xgb <- cm_xgb$byClass["Recall"]
+f1_xgb <- cm_xgb$byClass["F1"]
+cat(paste("XGB Precision:", round(precision_xgb, 4), "\n"))
+cat(paste("XGB Recall:", round(recall_xgb, 4), "\n"))
+cat(paste("XGB F1-score:", round(f1_xgb, 4), "\n"))
+
+plot(as.table(cm_xgb$table), main = "Confusion Matrix (XGBoost)",
+     xlab = "Predicted", ylab = "Actual")
+print("Displaying XGBoost Confusion Matrix visually")
+```
+```{r}
+roc_xgb <- roc(test_data$Loan_status, predictions_xgb_prob) 
+plot(roc_xgb, main = "ROC Curve for XGBoost")
+cat("AUC for XGBoost:", auc(roc_xgb), "\n")
+```
+
+```{r}
+# Model Comparison
+cat("Model Comparison")
+library(dplyr)
+model_metrics <- data.frame(
+  Model = c("KNN", "Logistic Regression", "SVM", "XGBoost"),
+  Accuracy = c(accuracy_knn, accuracy_lr, accuracy_svm, accuracy_xgb),
+  Error_Rate = c(error_rate_knn, error_rate_lr, error_rate_svm, error_rate_xgb),
+  Precision = c(precision_knn, precision_lr, precision_svm, precision_xgb),
+  Recall = c(recall_knn, recall_lr, recall_svm, recall_xgb),
+  F1_Score = c(f1_knn, f1_lr, f1_svm, f1_xgb)
+)
+print(model_metrics)
+ranked_models <- model_metrics %>%
+  arrange(desc(F1_Score))
+print(ranked_models)
+```
+
+```{r}
+model_metrics <- model_metrics[order(model_metrics$F1_Score, decreasing = TRUE), ]
+colors <- c("KNN" = "lightblue", "Logistic Regression" = "lightyellow", "SVM" = "lightpink", "XGBoost" = "gray")
+bar_colors <- colors[model_metrics$Model] # Get colors in the correct order
+
+barplot(
+  height = model_metrics$F1_Score,
+  names.arg = model_metrics$Model,
+  col = bar_colors,
+  ylim = c(0, 1),
+  main = "Model Comparison - F1 Score",
+  xlab = "Model",
+  ylab = "F1 Score"
+)
+text(
+  x = 1:nrow(model_metrics),
+  y = model_metrics$F1_Score + 0.05, 
+  labels = round(model_metrics$F1_Score, 3),
+  cex = 0.8
+)
+legend(
+  "topright",
+  legend = model_metrics$Model,
+  fill = bar_colors,
+  bty = "n" 
+)
+```
+
