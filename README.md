@@ -2,15 +2,11 @@
 
 A Machine Learning project that predicts whether a loan application will be **Approved** or **Rejected** using multiple classification algorithms. The project covers the complete machine learning pipeline, including data preprocessing, exploratory data analysis (EDA), feature engineering, model training, model evaluation, and performance comparison.
 
----
-
 ## Project Overview
 
 Financial institutions receive thousands of loan applications every day. Making accurate loan approval decisions is essential for reducing financial risk while approving eligible applicants efficiently.
 
 This project applies various supervised machine learning algorithms to predict loan approval based on applicant information such as credit score, income, employment status, loan amount, loan term, and asset value.
-
----
 
 ## Objectives
 
@@ -19,8 +15,6 @@ This project applies various supervised machine learning algorithms to predict l
 - Train multiple Machine Learning models
 - Evaluate model performance using standard classification metrics
 - Compare models to identify the best-performing classifier
-
----
 
 #  Technologies Used
 
@@ -33,8 +27,6 @@ This project applies various supervised machine learning algorithms to predict l
 - xgboost
 - pROC
 - ROCR
-
----
 
 #  Dataset Features
 
@@ -50,12 +42,10 @@ The dataset contains the following features:
 | Assets Value | Value of applicant assets |
 | Loan Status | Target variable (Approved / Rejected) |
 
----
 
-# ⚙️ Project Workflow
+# Project Workflow
 
 ## 1. Data Preprocessing
-
 - Data inspection
 - Missing value analysis
 - Outlier detection using IQR
@@ -63,12 +53,8 @@ The dataset contains the following features:
 - Feature normalization
 - Train/Test split
 
----
-
 ## 2. Exploratory Data Analysis (EDA)
-
 Performed various visualization techniques including:
-
 - Histograms
 - Boxplots
 - Scatter Plots
@@ -76,23 +62,15 @@ Performed various visualization techniques including:
 - Chi-Square Test
 - Employment vs Loan Status Analysis
 
----
-
 ## 3. Machine Learning Models
-
 The following classification algorithms were implemented and evaluated:
-
 -  K-Nearest Neighbors (KNN)
 -  Logistic Regression
 -  Support Vector Machine (SVM)
 -  XGBoost
 
----
-
 #  Model Evaluation
-
 Each model was evaluated using:
-
 - Accuracy
 - Precision
 - Recall
@@ -101,28 +79,19 @@ Each model was evaluated using:
 - ROC Curve
 - Area Under Curve (AUC)
 
----
-
 #  Model Comparison
-
 The project compares all models using common evaluation metrics to determine the most effective approach for loan approval prediction.
-
 Performance metrics include:
-
 - Accuracy
 - Error Rate
 - Precision
 - Recall
 - F1 Score
-
 A final comparison chart ranks all models based on their F1 Score.
 
----
-
-# 🚀 How to Run
+#  How to Run
 
 1. Clone the repository
-
 ```bash
 git clone https://github.com/yourusername/Loan-Approval-Prediction.git
 ```
@@ -130,7 +99,6 @@ git clone https://github.com/yourusername/Loan-Approval-Prediction.git
 2. Open the project in RStudio.
 
 3. Install the required packages.
-
 ```r
 install.packages(c(
   "caret",
@@ -145,12 +113,9 @@ install.packages(c(
 
 4. Run the R Markdown notebook.
 
----
-
-# 💡 Key Learning Outcomes
+#  Key Learning Outcomes
 
 Through this project, I gained practical experience in:
-
 - Machine Learning model development
 - Data preprocessing techniques
 - Feature engineering
@@ -159,6 +124,5 @@ Through this project, I gained practical experience in:
 - Model evaluation and comparison
 - R programming for Machine Learning
 
----
 
 ## ⭐ If you found this project useful, consider giving it a star!
