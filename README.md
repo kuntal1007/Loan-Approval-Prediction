@@ -45,7 +45,7 @@ The dataset contains the following features:
 
 # Project Workflow
 
-## 1. Data Preprocessing
+### 1. Data Preprocessing
 - Data inspection
 - Missing value analysis
 - Outlier detection using IQR
@@ -53,7 +53,7 @@ The dataset contains the following features:
 - Feature normalization
 - Train/Test split
 
-## 2. Exploratory Data Analysis (EDA)
+### 2. Exploratory Data Analysis (EDA)
 Performed various visualization techniques including:
 - Histograms
 - Boxplots
@@ -62,7 +62,7 @@ Performed various visualization techniques including:
 - Chi-Square Test
 - Employment vs Loan Status Analysis
 
-## 3. Machine Learning Models
+### 3. Machine Learning Models
 The following classification algorithms were implemented and evaluated:
 -  K-Nearest Neighbors (KNN)
 -  Logistic Regression
