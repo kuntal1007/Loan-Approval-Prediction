@@ -1,4 +1,4 @@
-#  Loan Approval Prediction using Machine Learning
+##  Loan Approval Prediction using Machine Learning
 
 A Machine Learning project that predicts whether a loan application will be **Approved** or **Rejected** using multiple classification algorithms. The project covers the complete machine learning pipeline, including data preprocessing, exploratory data analysis (EDA), feature engineering, model training, model evaluation, and performance comparison.
 
@@ -16,7 +16,7 @@ This project applies various supervised machine learning algorithms to predict l
 - Evaluate model performance using standard classification metrics
 - Compare models to identify the best-performing classifier
 
-#  Technologies Used
+##  Technologies Used
 
 - R
 - R Markdown
@@ -28,7 +28,7 @@ This project applies various supervised machine learning algorithms to predict l
 - pROC
 - ROCR
 
-#  Dataset Features
+##  Dataset Features
 
 The dataset contains the following features:
 
@@ -43,7 +43,7 @@ The dataset contains the following features:
 | Loan Status | Target variable (Approved / Rejected) |
 
 
-# Project Workflow
+## Project Workflow
 
 ### 1. Data Preprocessing
 - Data inspection
@@ -69,7 +69,7 @@ The following classification algorithms were implemented and evaluated:
 -  Support Vector Machine (SVM)
 -  XGBoost
 
-#  Model Evaluation
+##  Model Evaluation
 Each model was evaluated using:
 - Accuracy
 - Precision
@@ -79,7 +79,7 @@ Each model was evaluated using:
 - ROC Curve
 - Area Under Curve (AUC)
 
-#  Model Comparison
+##  Model Comparison
 The project compares all models using common evaluation metrics to determine the most effective approach for loan approval prediction.
 Performance metrics include:
 - Accuracy
@@ -89,7 +89,7 @@ Performance metrics include:
 - F1 Score
 A final comparison chart ranks all models based on their F1 Score.
 
-#  How to Run
+##  How to Run
 
 1. Clone the repository
 ```bash
@@ -113,7 +113,7 @@ install.packages(c(
 
 4. Run the R Markdown notebook.
 
-#  Key Learning Outcomes
+##  Key Learning Outcomes
 
 Through this project, I gained practical experience in:
 - Machine Learning model development
@@ -125,4 +125,4 @@ Through this project, I gained practical experience in:
 - R programming for Machine Learning
 
 
-## ⭐ If you found this project useful, consider giving it a star!
+### ⭐ If you found this project useful, consider giving it a star!
